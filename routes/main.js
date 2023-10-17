@@ -52,20 +52,21 @@ module.exports = function(app, shopData) {
                     return console.error(err.message);
                 }
                 else {
-                    res.send(' Your details has been registered, '+ req.body.first + req.body.last);
+                    //res.send(' Your details has been registered, '+ req.body.first + req.body.last);
+                    console.log('Successful!');
+
+                    // saving data in database
+                    // username = d.york, password = blackyellowred
+                    // j.eyre, washedlineplay
+                    // j.smith, playpianoletter
+                    // o.lonely, oldrosstrust
+                    const success_message = 'Hello ' + req.body.first + ' ' + req.body.last + ' you are now registered! We will send an email to you at ' 
+                    + req.body.email + '.Your password is: ' + req.body.password + ' and your hashed password is: ' + hashedPassword;
+                
+                    res.send(success_message);
                 }
             });
-        })
-
-        // saving data in database
-        // username = d.york, password = blackyellowred
-        // j.eyre, washedlineplay
-        result = 'Hello ' + req.body.first + ' ' + req.body.last + ' you are now registered! We will send an email to you at ' 
-        + req.body.email;
-        result += 'Your password is: ' + req.body.password + ' and your hashed password is: ' + hashedPassword;
-
-        res.send(result);                                                                              
-
+        })                                                                                    
     }); 
 
     app.get('/login', function(req, res) {
@@ -115,6 +116,37 @@ module.exports = function(app, shopData) {
         }); 
     });
         
+    app.get('/deleteuser', function(req, res) {
+
+        res.render('deleteusers.ejs', shopData);
+
+    });
+
+    app.post('/deleteuser', function(req, res) {
+
+        let sqlquery = `DELETE FROM users
+                        WHERE username = ? `
+
+        const user_to_delete = req.body.user
+        console.log(user_to_delete)
+        
+
+        //let newrecord = [req.body.user];
+        
+        db.query(sqlquery, user_to_delete, (err, result) => {
+            if (err) {
+                res.write("User could not be deleted. Please try again!");
+                return console.error(err.message);
+            }
+            else {
+                res.redirect('/');
+                //res.write(' All information related to username ('+ req.body.user + ') has been deleted');
+            }
+        });
+
+
+    });
+
 
     // Route that lists the users registered on the app
     app.get('/listusers', function(req, res) {
