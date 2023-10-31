@@ -49,18 +49,21 @@ module.exports = function(app, shopData) {
         res.render('register.ejs', shopData);                                                                     
     });             
 
-    //var loginValidation = [
-   //     check('email').isEmail().normalizeEmail()]
-        //check('plainPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long').notEmpty()]
+    var loginValidation = [
+        check('email').isEmail().normalizeEmail(),
+        check('plainPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long').notEmpty()]
 
+        //[check('email').isEmail(), check('password').isLength({ min: 8 })]
     // Route to handle and process a user being registered
     // isEmail() = function of express-validator that validates a form input as an email address                                                                                    
     // forcing user to enter a correct email input
-    app.post('/registered', [check('email').isEmail()], function (req, res) {
+    app.post('/registered', loginValidation, function (req, res) {
         const errors = validationResult(req);
         // if invalid email is inputted, user is redirected to the register page
         if (!errors.isEmpty()) {
-            res.redirect('./register'); }
+            res.send({message:'Password was too short. Please try again'});
+            //res.redirect('./register'); 
+        }
         else { 
             // setting the inputted password as the plainPassword
             const plainPassword = req.sanitize(req.body.password);
