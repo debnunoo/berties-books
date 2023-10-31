@@ -11,6 +11,9 @@ module.exports = function(app, shopData) {
         else { next (); }
     }
 
+    // added here so all routes can access it
+    const { check, validationResult, body } = require('express-validator');
+
     // calling on bcrypt - so it'll be used within the different routes
     const bcrypt = require('bcrypt');
 
@@ -30,7 +33,7 @@ module.exports = function(app, shopData) {
     // Route that handle that results when search is complete
     app.get('/search-result', function (req, res) {
         //searching in the database
-        let sqlquery = "SELECT * FROM books WHERE name LIKE '%" + req.query.keyword + "%'"; // query database to get all the books
+        let sqlquery = "SELECT * FROM books WHERE name LIKE '%" + req.sanitize(req.query.keyword) + "%'"; // query database to get all the books
         // execute sql query
         db.query(sqlquery, (err, result) => {
             if (err) {
@@ -45,49 +48,61 @@ module.exports = function(app, shopData) {
     app.get('/register', function (req,res) {
         res.render('register.ejs', shopData);                                                                     
     });             
-    // Route to handle and process a user being registered                                                                                    
-    app.post('/registered', function (req, res, next) {
 
-        // setting the inputted password as the plainPassword
-        const plainPassword = req.body.password;
-        // initialising the number of rounds that should be applied on the Salt
-        const saltRounds = 10;
-        // creating the hashedPassword using the password entered and the salt
-        const hashedPassword = bcrypt.hashSync(plainPassword, saltRounds);
+    //var loginValidation = [
+   //     check('email').isEmail().normalizeEmail()]
+        //check('plainPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long').notEmpty()]
 
-        // function to hash the passwords
-        bcrypt.hash(plainPassword, saltRounds, function(err, hashedPassword) {
-            // Storing the hashed password within the database
-           
-            /* creating a query to insert the user's details into the users database (in mysql)
-            - details from the register.ejs input form */
-            let sqlquery = "INSERT INTO users (username, first_name, last_name, email, hashedPassword) VALUES (?,?,?,?,?)";
-            // selecting the fields (from the HTML body) that would be used within the query
-            let newrecord = [req.body.user, req.body.first, req.body.last, req.body.email, hashedPassword];
-            // execute sql query
-            db.query(sqlquery, newrecord, (err, result) => {
-                if (err) {
-                    return console.error(err.message);
-                }
-                else {
-                    console.log('Successful!');
+    // Route to handle and process a user being registered
+    // isEmail() = function of express-validator that validates a form input as an email address                                                                                    
+    // forcing user to enter a correct email input
+    app.post('/registered', [check('email').isEmail()], function (req, res) {
+        const errors = validationResult(req);
+        // if invalid email is inputted, user is redirected to the register page
+        if (!errors.isEmpty()) {
+            res.redirect('./register'); }
+        else { 
+            // setting the inputted password as the plainPassword
+            const plainPassword = req.sanitize(req.body.password);
+            // initialising the number of rounds that should be applied on the Salt
+            const saltRounds = 10;
+            // creating the hashedPassword using the password entered and the salt
+            const hashedPassword = bcrypt.hashSync(plainPassword, saltRounds);
 
-                    // saving data in database
-                    // username = d.york, password = blackyellowred
-                    // j.eyre, washedlineplay
-                    // j.smith, playpianoletter
-                    // o.lonely, oldrosstrust
+            // function to hash the passwords
+            bcrypt.hash(plainPassword, saltRounds, function(err, hashedPassword) {
+                // Storing the hashed password within the database
+            
+                /* creating a query to insert the user's details into the users database (in mysql)
+                - details from the register.ejs input form */
+                let sqlquery = "INSERT INTO users (username, first_name, last_name, email, hashedPassword) VALUES (?,?,?,?,?)";
+                // selecting the fields (from the HTML body) that would be used within the query
+                let newrecord = [req.sanitize(req.body.user), req.sanitize(req.body.first), req.sanitize(req.body.last), req.sanitize(req.body.email), hashedPassword];
+                // execute sql query
+                db.query(sqlquery, newrecord, (err, result) => {
+                    if (err) {
+                        return console.error(err.message);
+                    }
+                    else {
+                        console.log('Successful!');
 
-                    /* writing a message that will displayed within the console when the user registers */
-                    const success_message = 'Hello ' + req.body.first + ' ' + req.body.last + ' you are now registered! We will send an email to you at ' 
-                    + req.body.email + '.Your password is: ' + req.body.password + ' and your hashed password is: ' + hashedPassword;
-                    console.log(success_message);
+                        // saving data in database
+                        // username = d.york, password = blackyellowred
+                        // j.eyre, washedlineplay
+                        // j.smith, playpianoletter
+                        // o.lonely, oldrosstrust
 
-                    // redirecting the user to the home page when logged in
-                    res.redirect(301, '/');
-                }
-            });
-        })                                                                                    
+                        /* writing a message that will displayed within the console when the user registers */
+                        const success_message = 'Hello ' + req.sanitize(req.body.first) + ' ' + req.sanitize(req.body.last) + ' you are now registered! We will send an email to you at ' 
+                        + req.body.email + '.Your password is: ' + req.sanitize(req.body.password) + ' and your hashed password is: ' + hashedPassword;
+                        console.log(success_message);
+
+                        // redirecting the user to the home page when logged in
+                        res.redirect(301, '/');
+                    }
+                });
+            }); 
+        }                                                                                   
     }); 
 
     // Login page
@@ -95,53 +110,60 @@ module.exports = function(app, shopData) {
         res.render('login.ejs', shopData); 
     });
     // Route that handle and process user logging in
-    app.post('/loggedin', function(req, res) {
+    app.post('/loggedin', [check('user').notEmpty(), check('password').notEmpty()] ,function(req, res) {
+        const errors = validationResult(req);
+        // if invalid email is inputted, user is redirected to the register page
+        if (!errors.isEmpty()) {
+            res.redirect('./login');
+            return ('Please enter the correct details');
+        }
+        else {
+            // query to select the user's username and hashedPassword from the database
+            let sqlquery = `SELECT username, hashedPassword
+                            FROM users
+                            WHERE username = ?`
 
-        // query to select the user's username and hashedPassword from the database
-        let sqlquery = `SELECT username, hashedPassword
-                        FROM users
-                        WHERE username = ?`
+                            console.log(req.body.user)
+                            console.log(req.body.password)
+            //let newrecord = [req.body.user]
+            
+            // executing the query
+            db.query(sqlquery, req.sanitize(req.body.user), (err, result) => {
+                if (err) {
+                    
+                    return console.error(err.message);
+                }
+                else
+                {
+                    console.log(result);
+                    // getting the hashsedPassword from the query
+                    hashedPassword = result[0].hashedPassword;
+                    console.log(hashedPassword)
 
-                        console.log(req.body.user)
-                        console.log(req.body.password)
-        //let newrecord = [req.body.user]
-        
-        // executing the query
-        db.query(sqlquery, req.body.user, (err, result) => {
-            if (err) {
-                
-                return console.error(err.message);
-            }
-            else
-            {
-                console.log(result);
-                // getting the hashsedPassword from the query
-                hashedPassword = result[0].hashedPassword;
-                console.log(hashedPassword)
+                    // Compare the password supplied with the password in the database
+                    bcrypt.compare(req.sanitize(req.body.password), hashedPassword, function(err, result) {
+                        if (err) {
+                            // Handling error
+                            res.send('Sorry, your password seems to be incorrect');
+                        }
+                        else if (result == true) {
+                            // Sending message to client to say successful
+                            //res.send('Login successful');
 
-                // Compare the password supplied with the password in the database
-                bcrypt.compare(req.body.password, hashedPassword, function(err, result) {
-                    if (err) {
-                        // Handling error
-                        res.send('Sorry, your password seems to be incorrect');
-                    }
-                    else if (result == true) {
-                        // Sending message to client to say successful
-                        //res.send('Login successful');
+                            // Save user session here, when login is successful
+                            req.session.userId = req.sanitize(req.body.user);
+                            // redirecting the user to the homepage after they've logged in successfully
+                            res.redirect('/');
 
-                        // Save user session here, when login is successful
-                        req.session.userId = req.body.user;
-                        // redirecting the user to the homepage after they've logged in successfully
-                        res.redirect('/');
-
-                    }
-                    else {
-                        // Sending message to client to make them aware something has gone wrong
-                        res.send('Please try again');
-                    };
-                });                
-            }
-        }); 
+                        }
+                        else {
+                            // Sending message to client to make them aware something has gone wrong
+                            res.send('Please try again');
+                        };
+                    });                
+                }
+            }); 
+        }
     });
     // Route to handle and process when user logs out of the application
     app.get('/logout', redirectLogin, (req,res) => {
@@ -166,7 +188,7 @@ module.exports = function(app, shopData) {
                         WHERE username = ? `
 
         // getting the username from the HTML body that will be deleted
-        const user_to_delete = req.body.user
+        const user_to_delete = req.sanitize(req.body.user)
         console.log(user_to_delete)
         
         // executing sql query
@@ -223,7 +245,7 @@ module.exports = function(app, shopData) {
         // saving data in database
         let sqlquery = "INSERT INTO books (name, price) VALUES (?,?)";
         // Selecting fields that will be inputted into the database from the HTML body
-        let newrecord = [req.body.name, req.body.price];
+        let newrecord = [req.sanitize(req.body.name), req.sanitize(req.body.price)]
         // execute sql query
         db.query(sqlquery, newrecord, (err, result) => {
             if (err) {
