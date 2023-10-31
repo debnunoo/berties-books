@@ -49,20 +49,19 @@ module.exports = function(app, shopData) {
         res.render('register.ejs', shopData);                                                                     
     });             
 
+    // isEmail() = function of express-validator that validates a form input as an email address                                                                                    
     var loginValidation = [
         check('email').isEmail().normalizeEmail(),
-        check('plainPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long').notEmpty()]
+        check('plainPassword').isLength({ min: 8 }).notEmpty()]
 
-        //[check('email').isEmail(), check('password').isLength({ min: 8 })]
     // Route to handle and process a user being registered
-    // isEmail() = function of express-validator that validates a form input as an email address                                                                                    
     // forcing user to enter a correct email input
     app.post('/registered', loginValidation, function (req, res) {
         const errors = validationResult(req);
         // if invalid email is inputted, user is redirected to the register page
         if (!errors.isEmpty()) {
-            res.send({message:'Password was too short. Please try again'});
-            //res.redirect('./register'); 
+            const errMessage = 'Password was too short. <a href="/register"> Please try again </a>';
+            res.send(errMessage);
         }
         else { 
             // setting the inputted password as the plainPassword
@@ -117,8 +116,8 @@ module.exports = function(app, shopData) {
         const errors = validationResult(req);
         // if invalid email is inputted, user is redirected to the register page
         if (!errors.isEmpty()) {
-            res.redirect('./login');
-            return ('Please enter the correct details');
+            const errMessage = 'Please enter the correct details. <a href="/login"> Please try again </a>';
+            res.send(errMessage);
         }
         else {
             // query to select the user's username and hashedPassword from the database
@@ -256,22 +255,22 @@ module.exports = function(app, shopData) {
             }
             else {
                 // Message to send when book has been added to the database
-                res.send('This book is added to database, name: '+ req.body.name + ' price '+ req.body.price);
+                res.send('This book is added to database, name: '+ req.sanitize(req.body.name) + ' price '+ req.sanitize(req.body.price));
             }
         });
     });    
     // Bargain books page
     app.get('/bargainbooks', function(req, res) {
     // Query to select all books that are less than £20
-    let sqlquery = "SELECT * FROM books WHERE price < 20";
-    db.query(sqlquery, (err, result) => {
-        if (err) {
-            res.redirect('./');
-        }
-        let newData = Object.assign({}, shopData, {availableBooks:result});
-        console.log(newData)
-        res.render("bargains.ejs", newData)
-    });
+        let sqlquery = "SELECT * FROM books WHERE price < 20";
+        db.query(sqlquery, (err, result) => {
+            if (err) {
+                res.redirect('./');
+            }
+            let newData = Object.assign({}, shopData, {availableBooks:result});
+            console.log(newData)
+            res.render("bargains.ejs", newData)
+        });
     });       
 
 }
