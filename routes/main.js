@@ -1,5 +1,7 @@
 module.exports = function(app, shopData) {
 
+    // allows HTTP requests to be made to an API and returns the result
+    const request = require('request');
     // all routes within main.js would be able to access this
     const redirectLogin = (req, res, next) => {
         // checking to see if the a session has been created for the user
@@ -273,4 +275,41 @@ module.exports = function(app, shopData) {
         });
     });       
 
+    // Getting and rendering the form users will input the weather
+    app.get('/weather-form', function(req, res) {
+        res.render('weather.ejs', shopData);
+    })
+
+    // Incorporating a Web API - a weather API
+    app.get('/weather', function(req, res) {  
+        let apiKey = 'ae52bdaf6e08240c4d5499002c23428c';
+        // Variable will get the city name inputted by the user
+        let city = req.query.city;
+        let url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`
+
+        request(url, function(err, response, body) {
+            if(err) {
+                console.log('error:', error);
+            }
+            else {
+                //res.send(body);
+                // Making the weather forecast more human-friendly
+                // parsing the body information, which turns the JSON into a Javascript array
+                var weather = JSON.parse(body);
+                console.log(weather);
+                // Adding error handling in case the app crashes
+                if(weather !== undefined && weather.main !== undefined) {
+                    var wmsg = 'It is ' + weather.main.temp + ' degrees in ' + weather.name +
+                    '! <br> The humidity now is: ' + weather.main.humidity + '. But the wind is '
+                    + weather.wind.speed + weather.wind.deg;
+                    res.send(wmsg);
+                    //res.render('weather.ejs', shopData)
+                }
+                // Message to be sent back if user enters a non-existent place name
+                else {
+                    res.send("No data found. Please try again");
+                }
+            }
+        });
+    }); 
 }
