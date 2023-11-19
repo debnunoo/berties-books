@@ -2,6 +2,8 @@ module.exports = function(app, shopData) {
 
     // allows HTTP requests to be made to an API and returns the result
     const request = require('request');
+    // adding here in order to access the apiKey within the config.js file
+    const config = require('./config.js');
     // all routes within main.js would be able to access this
     const redirectLogin = (req, res, next) => {
         // checking to see if the a session has been created for the user
@@ -282,7 +284,7 @@ module.exports = function(app, shopData) {
 
     // Incorporating a Web API - a weather API
     app.get('/weather', function(req, res) {  
-        let apiKey = 'ae52bdaf6e08240c4d5499002c23428c';
+        let apiKey = config.apiKey;
         // Variable will get the city name inputted by the user
         let city = req.query.city;
         let url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`
