@@ -314,4 +314,16 @@ module.exports = function(app, shopData) {
             }
         });
     }); 
+    app.get('/api', function(req, res) {
+        let sqlquery = "SELECT * FROM books";
+
+        db.query(sqlquery, (err, result) => {
+            if(err) {
+                res.redirect('./');
+            }
+            // Returning the results as a JSON object
+            res.json(result);
+        });
+    });
+
 }
